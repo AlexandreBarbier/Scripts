@@ -12,7 +12,6 @@ func createStoryboardEnum() -> Dictionary<String, String> {
     let enumerator = filemanager.enumeratorAtPath(Process.arguments[1])
     var resultDictionary = Dictionary<String, String>()
     while let element = enumerator?.nextObject()  {
-
         if let url = NSURL(string:"\(Process.arguments[1])/\(element)") {
             if url.pathExtension! == "storyboard" {
                 let k = url.URLByDeletingPathExtension
@@ -73,7 +72,6 @@ func createSegueEnum() -> Dictionary<String, String> {
                     for t in matches {
                         let res = (str as NSString).substringWithRange(t.rangeAtIndex(1))
                         resultDictionary.updateValue(res, forKey: res)
-
                     }
                 }
                 catch   let error as NSError {
@@ -88,30 +86,49 @@ func createSegueEnum() -> Dictionary<String, String> {
 }
 
 func createEnum(enumName:String, value:Dictionary<String, String>)->String {
-    var str = "enum \(enumName) : String {\n"
+    var enumGlobal = "/**\n\(enumName) identifiers\n"
+    var enumBody = "struct \(enumName)ID {\n"
     for (key, _) in value {
-        str += "\tcase \(key)\n"
+        enumGlobal += "\n- \(key):\t\(key)"
+        enumBody += "\t let static k\(key) = \"\(key)\"\n"
     }
-    str += "}\n"
-    return str
+    enumGlobal += "\n*/\n"
+    enumGlobal += enumBody
+    enumGlobal += "}\n"
+    return enumGlobal
 }
 
 func CreateConstantFile() {
     let storyEnum = createStoryboardEnum()
-    var str = createEnum("StoryboardID", value:storyEnum)
+    var str = ""
+    if storyEnum.count > 0 {
+        print("storyboard created")
+        str = createEnum("Storyboard", value:storyEnum)
+    }
+    else {
+        print("no storyboard found in \(Process.arguments[1])")
+        return
+    }
     let segueEnum = createSegueEnum()
-    let segues = createEnum("SegueID", value:segueEnum)
-    str += "\n\n\(segues)"
+    if segueEnum.count > 0 {
+        print("segue created")
+        let segues = createEnum("Segue", value:segueEnum)
+        str += "\n\n\(segues)"
+    }
     let vcEnum = createViewControllerEnum()
-    let vcs = createEnum("ViewControllerID", value:vcEnum)
-    str += "\n\n\(vcs)"
-
-    do {
-        try     str.writeToFile("\(Process.arguments[1])/\(Process.arguments[2])", atomically: true, encoding: NSUTF8StringEncoding)
-    }catch {
-
+    if vcEnum.count > 0 {
+        print("view controllers created")
+        let vcs = createEnum("ViewController", value:vcEnum)
+        str += "\n\n\(vcs)"
     }
 
+
+    do {
+        try  str.writeToFile("\(Process.arguments[1])/\(Process.arguments[2])", atomically: true, encoding: NSUTF8StringEncoding)
+    }catch {
+        print ("\(error)")
+    }
+    return
 }
 
 
